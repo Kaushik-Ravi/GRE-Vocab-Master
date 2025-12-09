@@ -1,6 +1,15 @@
 import React from 'react';
 import { ViewState } from '../types';
-import { Cog6ToothIcon, SunIcon, MoonIcon } from '@heroicons/react/24/outline';
+import { 
+  Cog6ToothIcon, 
+  SunIcon, 
+  MoonIcon, 
+  RectangleStackIcon, 
+  ArchiveBoxIcon, 
+  PlayCircleIcon, 
+  NewspaperIcon, 
+  CircleStackIcon 
+} from '@heroicons/react/24/outline';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -12,9 +21,17 @@ interface LayoutProps {
 }
 
 const Layout: React.FC<LayoutProps> = ({ children, currentView, onChangeView, streak, isDarkMode, onToggleDarkMode }) => {
+  const navItems = [
+    { view: ViewState.DASHBOARD, label: 'Sets', icon: RectangleStackIcon },
+    { view: ViewState.LIBRARY, label: 'Library', icon: ArchiveBoxIcon },
+    { view: ViewState.STUDY, label: 'Study', icon: PlayCircleIcon },
+    { view: ViewState.READING, label: 'Read', icon: NewspaperIcon },
+    { view: ViewState.SETTINGS, label: 'Data', icon: CircleStackIcon },
+  ];
+
   return (
     <div className="min-h-screen flex flex-col bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-slate-100 transition-colors duration-300">
-      {/* Navbar */}
+      {/* Navbar (Desktop/Tablet) */}
       <nav className="sticky top-0 z-50 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border-b border-slate-200 dark:border-slate-800">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
@@ -74,17 +91,22 @@ const Layout: React.FC<LayoutProps> = ({ children, currentView, onChangeView, st
       </nav>
 
       {/* Main Content */}
-      <main className="flex-1 max-w-5xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <main className="flex-1 max-w-5xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 mb-20 md:mb-0">
         {children}
       </main>
 
       {/* Mobile Bottom Nav */}
-      <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 p-4 flex justify-around items-center z-50 pb-safe">
-         <button onClick={() => onChangeView(ViewState.DASHBOARD)} className={currentView === ViewState.DASHBOARD ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-400 font-bold text-xs'}>SETS</button>
-         <button onClick={() => onChangeView(ViewState.LIBRARY)} className={currentView === ViewState.LIBRARY ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-400 font-bold text-xs'}>LIB</button>
-         <button onClick={() => onChangeView(ViewState.STUDY)} className={currentView === ViewState.STUDY ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-400 font-bold text-xs'}>STUDY</button>
-         <button onClick={() => onChangeView(ViewState.READING)} className={currentView === ViewState.READING ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-400 font-bold text-xs'}>READ</button>
-         <button onClick={() => onChangeView(ViewState.SETTINGS)} className={currentView === ViewState.SETTINGS ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-400 font-bold text-xs'}>DATA</button>
+      <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 flex justify-around items-center z-[100] pb-safe shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
+         {navItems.map((item) => (
+             <button 
+                key={item.label}
+                onClick={() => onChangeView(item.view)} 
+                className={`flex flex-col items-center justify-center w-full py-3 active:bg-slate-50 dark:active:bg-slate-800 transition-colors ${currentView === item.view ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-300'}`}
+             >
+                <item.icon className={`w-6 h-6 mb-1 ${currentView === item.view ? 'stroke-2' : 'stroke-1.5'}`} />
+                <span className="text-[10px] font-bold uppercase tracking-wide">{item.label}</span>
+             </button>
+         ))}
       </div>
     </div>
   );

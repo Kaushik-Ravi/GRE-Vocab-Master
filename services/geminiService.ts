@@ -88,6 +88,35 @@ export const fetchWordDetails = async (word: string): Promise<Partial<WordData>>
   });
 };
 
+export const generateWordImage = async (word: string, mnemonic: string): Promise<string | null> => {
+  const ai = getClient();
+  const prompt = `Generate a simple, memorable, cartoon-style illustration to help remember the word "${word}". 
+  The concept is: ${mnemonic || "A visual representation of " + word}. 
+  Do not include text in the image.`;
+
+  try {
+     const response = await ai.models.generateContent({
+        model: 'gemini-2.5-flash-image',
+        contents: prompt,
+        config: {
+           // No special config for flash-image model
+        }
+     });
+     
+     if (response.candidates?.[0]?.content?.parts) {
+         for (const part of response.candidates[0].content.parts) {
+             if (part.inlineData) {
+                 return `data:${part.inlineData.mimeType};base64,${part.inlineData.data}`;
+             }
+         }
+     }
+     return null;
+  } catch (e) {
+      console.error("Image gen failed", e);
+      return null;
+  }
+};
+
 export const validateSentence = async (word: string, sentence: string): Promise<{ isCorrect: boolean; feedback: string }> => {
   const ai = getClient();
   

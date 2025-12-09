@@ -18,7 +18,9 @@ export interface WordData {
   etymology: string;
   aiMnemonic: string;
   userMnemonic?: string;
+  aiImageUrl?: string; 
   mastered: boolean;
+  isCustom?: boolean; // New flag: true if user added this word manually (even if duplicate)
   lastReview?: number;
   // SRS Fields
   leitnerBox: number; // 0 = New, 1..5 = Review Intervals

@@ -68,7 +68,15 @@ export const saveStoredState = async (state: AppState): Promise<void> => {
 // Helper to handle the seeding logic centrally
 const seedInitialData = (state: AppState): AppState => {
    const existingWordSet = new Set(state.words.map(w => w.word.toLowerCase()));
-   const newWordsToAdd = INITIAL_WORDS_LIST.filter(w => !existingWordSet.has(w.toLowerCase()));
+   
+   // Randomize the initial list using Fisher-Yates shuffle
+   const shuffledList = [...INITIAL_WORDS_LIST];
+   for (let i = shuffledList.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [shuffledList[i], shuffledList[j]] = [shuffledList[j], shuffledList[i]];
+   }
+
+   const newWordsToAdd = shuffledList.filter(w => !existingWordSet.has(w.toLowerCase()));
    
    if (newWordsToAdd.length === 0) return state;
 
