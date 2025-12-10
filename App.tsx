@@ -15,6 +15,16 @@ import {
 // Constants
 const WORDS_PER_SET = 30;
 
+// Fisher-Yates shuffle for robust randomization
+const shuffleArray = <T,>(array: T[]): T[] => {
+    const newArr = [...array];
+    for (let i = newArr.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [newArr[i], newArr[j]] = [newArr[j], newArr[i]];
+    }
+    return newArr;
+};
+
 const App: React.FC = () => {
   const [appState, setAppState] = useState<AppState | null>(null); // Null while loading DB
   const [currentView, setCurrentView] = useState<ViewState>(ViewState.DASHBOARD);
@@ -62,8 +72,14 @@ const App: React.FC = () => {
                  newStreak = 1; // First login
             }
 
-            newState = { ...newState, lastLoginDate: today, streak: newStreak, dailyProgress: 0 };
+            newState = { ...newState, lastLoginDate: today, streak: newStreak, dailyProgress: 0, dailyUniqueProgress: 0 };
             await saveStoredState(newState);
+        } else {
+             // Ensure new field exists if migrating from old state without logout
+             newState = { 
+                 ...newState, 
+                 dailyUniqueProgress: (typeof newState.dailyUniqueProgress === 'number') ? newState.dailyUniqueProgress : 0 
+             };
         }
         
         // Apply Dark Mode Immediately
@@ -196,8 +212,9 @@ const App: React.FC = () => {
           return;
       }
       
-      // Shuffle but DO NOT slice - User requested ALL words
-      const shuffled = words.sort(() => 0.5 - Math.random());
+      // Ensure words are unique by ID before shuffling (failsafe against any state anomalies)
+      const uniqueWords = Array.from(new Map(words.map(w => [w.id, w])).values());
+      const shuffled = shuffleArray(uniqueWords);
       prepareStudySession(shuffled);
   };
 
@@ -207,6 +224,12 @@ const App: React.FC = () => {
     
     let newBox = 0;
     let nextReview = 0;
+    let uniqueIncrement = 0;
+
+    // Check if this was a new word (for stats)
+    if (currentWord.leitnerBox === 0) {
+        uniqueIncrement = 1;
+    }
     
     // UPDATED WORKFLOW (AGGRESSIVE MASTERY):
     // If user clicks "Mastered It!" (isCorrect=true), we promote immediately to Box 5 (Mastered Deck).
@@ -235,7 +258,8 @@ const App: React.FC = () => {
     const newState = { 
         ...appState, 
         words: updatedWords, 
-        dailyProgress: appState.dailyProgress + 1 
+        dailyProgress: appState.dailyProgress + 1,
+        dailyUniqueProgress: appState.dailyUniqueProgress + uniqueIncrement
     };
     
     setAppState(newState);
@@ -496,14 +520,21 @@ const App: React.FC = () => {
         </div>
 
         {/* Header Stats */}
-        <div className="bg-gradient-to-r from-indigo-600 to-purple-600 rounded-3xl p-8 text-white shadow-xl flex justify-between items-center">
+        <div className="bg-gradient-to-r from-indigo-600 to-purple-600 rounded-3xl p-8 text-white shadow-xl flex flex-col md:flex-row justify-between items-center gap-4">
             <div>
-              <h1 className="text-4xl font-serif font-bold mb-2">My Word Sets</h1>
+              <h1 className="text-3xl md:text-4xl font-serif font-bold mb-2">My Word Sets</h1>
               <p className="opacity-90 text-lg">Master the GRE vocabulary.</p>
             </div>
-            <div className="text-right">
-                 <div className="text-3xl font-bold">{appState.dailyProgress} / {appState.dailyGoal}</div>
-                 <div className="text-sm opacity-75">Daily Cards</div>
+            <div className="flex gap-8 text-right">
+                 <div>
+                    <div className="text-3xl font-bold">{appState.dailyUniqueProgress}</div>
+                    <div className="text-sm opacity-75">New Words</div>
+                 </div>
+                 <div className="w-px bg-white/30 h-12 self-center"></div>
+                 <div>
+                    <div className="text-3xl font-bold">{appState.dailyProgress}</div>
+                    <div className="text-sm opacity-75">Total Reviews</div>
+                 </div>
             </div>
         </div>
 

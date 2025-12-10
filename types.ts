@@ -48,7 +48,8 @@ export interface AppState {
   streak: number;
   lastLoginDate: string; // YYYY-MM-DD
   dailyGoal: number; // number of cards to review
-  dailyProgress: number;
+  dailyProgress: number; // Total cards reviewed today
+  dailyUniqueProgress: number; // New cards (Box 0) learned today
   darkMode: boolean;
 }
 

@@ -10,6 +10,7 @@ const DEFAULT_STATE: AppState = {
   lastLoginDate: '',
   dailyGoal: 20,
   dailyProgress: 0,
+  dailyUniqueProgress: 0,
   darkMode: false
 };
 
