@@ -205,13 +205,28 @@ const App: React.FC = () => {
     if (!appState) return;
     const currentWord = studyQueue[currentCardIndex];
     
-    // Calculate new SRS state
-    const { box, nextReview } = calculateNextReview(currentWord.leitnerBox || 0, isCorrect);
-    const isMastered = box >= 5;
+    let newBox = 0;
+    let nextReview = 0;
+    
+    // UPDATED WORKFLOW (AGGRESSIVE MASTERY):
+    // If user clicks "Mastered It!" (isCorrect=true), we promote immediately to Box 5 (Mastered Deck).
+    // If user clicks "Review Later" (isCorrect=false), we demote to Box 1 (In Progress Deck).
+    
+    if (isCorrect) {
+        newBox = 5; // Mastered Level
+        // Set next review to 30 days from now
+        nextReview = Date.now() + (30 * 24 * 60 * 60 * 1000); 
+    } else {
+        newBox = 1; // Learning / In Progress Level
+        // Set next review to 1 day from now
+        nextReview = Date.now() + (24 * 60 * 60 * 1000);
+    }
+
+    const isMastered = newBox >= 5;
 
     const updatedWords = appState.words.map(w => w.id === currentWord.id ? { 
         ...w, 
-        leitnerBox: box, 
+        leitnerBox: newBox, 
         nextReviewDate: nextReview,
         mastered: isMastered,
         lastReview: Date.now() 
