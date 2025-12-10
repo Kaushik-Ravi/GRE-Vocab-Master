@@ -195,7 +195,9 @@ const App: React.FC = () => {
           alert("No words found in this category yet!");
           return;
       }
-      const shuffled = words.sort(() => 0.5 - Math.random()).slice(0, 30);
+      
+      // Shuffle but DO NOT slice - User requested ALL words
+      const shuffled = words.sort(() => 0.5 - Math.random());
       prepareStudySession(shuffled);
   };
 
