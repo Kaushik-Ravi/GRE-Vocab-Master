@@ -9,7 +9,7 @@ import {
   PlusIcon, BookOpenIcon, ArrowPathIcon, MagnifyingGlassIcon, 
   CheckBadgeIcon, PlayCircleIcon, ArrowDownTrayIcon, ArrowUpTrayIcon, 
   ClockIcon, FunnelIcon, SparklesIcon, TrophyIcon, BeakerIcon, UserIcon,
-  DocumentPlusIcon
+  DocumentPlusIcon, ArrowsRightLeftIcon
 } from '@heroicons/react/24/outline';
 
 // Constants
@@ -391,6 +391,52 @@ const App: React.FC = () => {
         setIsAddingWords(false);
         setAddWordsStatus('');
     }
+  };
+
+  const handleSmartReshuffle = async () => {
+    if (!appState) return;
+    
+    // Safety check: ensure we actually have words to shuffle
+    const seedWords = appState.words.filter(w => w.id.startsWith('seed-'));
+    if (seedWords.length === 0) {
+        alert("No course material found to reshuffle.");
+        return;
+    }
+
+    const confirm = window.confirm(
+        "Reshuffle Course Material?\n\n" +
+        "This will randomize the order of all FUTURE (unstudied) words.\n" +
+        "Words you have already started learning will stay at the beginning of your course to preserve your progress.\n\n" +
+        "This ensures a random mix of words instead of alphabetical order."
+    );
+    
+    if (!confirm) return;
+
+    setIsAddingWords(true); 
+    setAddWordsStatus('Reshuffling library...');
+
+    // 1. Separate custom words (keep them at the end or distinct)
+    const customWords = appState.words.filter(w => !w.id.startsWith('seed-'));
+
+    // 2. Split seed words into Started (touched) vs Unstarted (new)
+    // Started = Mastered OR Leitner Box > 0
+    const startedSeeds = seedWords.filter(w => w.mastered || w.leitnerBox > 0);
+    const unstartedSeeds = seedWords.filter(w => !w.mastered && w.leitnerBox === 0);
+
+    // 3. Shuffle ONLY the unstarted words
+    const shuffledUnstarted = shuffleArray(unstartedSeeds);
+
+    // 4. Recombine: Started First (Preserves Set 1, 2...) -> Shuffled New -> Custom
+    const newWords = [...startedSeeds, ...shuffledUnstarted, ...customWords];
+
+    // 5. Save
+    const newState = { ...appState, words: newWords };
+    setAppState(newState);
+    await saveStoredState(newState);
+    
+    setIsAddingWords(false);
+    setAddWordsStatus('');
+    alert("Success! Your future word sets have been randomized.");
   };
 
   // Export/Import Handlers
@@ -919,6 +965,28 @@ const App: React.FC = () => {
              </div>
 
              <div className="space-y-6">
+                 {/* Smart Shuffle Section */}
+                 <div className="bg-white dark:bg-slate-800 p-8 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm">
+                     <div className="flex items-start gap-4 mb-6">
+                         <div className="p-3 bg-purple-50 dark:bg-purple-900/30 rounded-xl">
+                            <ArrowsRightLeftIcon className="w-6 h-6 text-purple-600 dark:text-purple-400" />
+                         </div>
+                         <div>
+                             <h3 className="text-xl font-bold text-slate-800 dark:text-white">Reshuffle Content</h3>
+                             <p className="text-slate-500 dark:text-slate-400 text-sm mt-1">
+                                 Randomize unstudied words to prevent alphabetical predictability. 
+                                 <br/><span className="font-bold text-slate-600 dark:text-slate-300">Preserves your current progress.</span>
+                             </p>
+                         </div>
+                     </div>
+                     <button 
+                        onClick={handleSmartReshuffle}
+                        className="w-full py-3 bg-purple-600 hover:bg-purple-700 text-white font-bold rounded-xl transition-colors"
+                     >
+                        Randomize Future Sets
+                     </button>
+                 </div>
+
                  {/* Export Section */}
                  <div className="bg-white dark:bg-slate-800 p-8 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm">
                      <div className="flex items-start gap-4 mb-6">
