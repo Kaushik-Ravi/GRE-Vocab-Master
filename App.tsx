@@ -82,6 +82,45 @@ const App: React.FC = () => {
              };
         }
         
+        // --- AUTO-MIGRATION: Randomize if sorted ---
+        // This addresses the user issue where sets are alphabetical (e.g. all 'B's).
+        // We detect this by checking if the unstudied words are largely alphabetical.
+        const seedWords = newState.words.filter(w => w.id.startsWith('seed-'));
+        const unstartedSeeds = seedWords.filter(w => !w.mastered && w.leitnerBox === 0);
+        
+        // Only run check if we have enough data and it's worth shuffling
+        if (unstartedSeeds.length > 50) {
+             let letterChanges = 0;
+             // Check the first 100 or all if less
+             const checkLimit = Math.min(unstartedSeeds.length, 100);
+             for (let i = 0; i < checkLimit - 1; i++) {
+                 // Compare first letters
+                 if (unstartedSeeds[i].word[0].toLowerCase() !== unstartedSeeds[i+1].word[0].toLowerCase()) {
+                     letterChanges++;
+                 }
+             }
+             
+             // In a sorted list, letter changes are few (e.g. A->B->C = 2 changes in hundreds of words).
+             // In a random list, changes are frequent.
+             // Threshold: if changes are less than 15% of the checked count, it's likely sorted.
+             if (letterChanges < checkLimit * 0.15) {
+                  console.log("Detected alphabetical/sorted list. Randomizing unstudied words to improve diversity...");
+                  
+                  const startedSeeds = seedWords.filter(w => w.mastered || w.leitnerBox > 0);
+                  const customWords = newState.words.filter(w => !w.id.startsWith('seed-'));
+                  
+                  // Shuffle ONLY the unstarted words
+                  const shuffledUnstarted = shuffleArray(unstartedSeeds);
+                  
+                  // Reconstruct: [Started] ... [Randomized New] ... [Custom]
+                  // This preserves "Set 1" progress if it exists, and fixes the rest.
+                  newState.words = [...startedSeeds, ...shuffledUnstarted, ...customWords];
+                  
+                  await saveStoredState(newState);
+             }
+        }
+        // -------------------------------------------
+
         // Apply Dark Mode Immediately
         if (newState.darkMode) {
             document.documentElement.classList.add('dark');
