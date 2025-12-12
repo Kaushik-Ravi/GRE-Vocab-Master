@@ -9,7 +9,7 @@ import {
   PlusIcon, BookOpenIcon, ArrowPathIcon, MagnifyingGlassIcon, 
   CheckBadgeIcon, PlayCircleIcon, ArrowDownTrayIcon, ArrowUpTrayIcon, 
   ClockIcon, FunnelIcon, SparklesIcon, TrophyIcon, BeakerIcon, UserIcon,
-  DocumentPlusIcon, ArrowsRightLeftIcon
+  DocumentPlusIcon, ArrowsRightLeftIcon, Bars3BottomLeftIcon
 } from '@heroicons/react/24/outline';
 
 // Constants
@@ -48,6 +48,10 @@ const App: React.FC = () => {
   // Library State
   const [librarySearch, setLibrarySearch] = useState('');
   const [libraryFilter, setLibraryFilter] = useState<'all' | 'mastered' | 'learning' | 'new' | 'custom'>('all');
+  const [librarySort, setLibrarySort] = useState<'newest' | 'oldest' | 'a-z' | 'z-a'>('newest');
+
+  // Smart Deck State
+  const [smartDeckSort, setSmartDeckSort] = useState<'random' | 'newest' | 'oldest'>('random');
 
   // Initialization from DB
   useEffect(() => {
@@ -252,9 +256,34 @@ const App: React.FC = () => {
       }
       
       // Ensure words are unique by ID before shuffling (failsafe against any state anomalies)
-      const uniqueWords = Array.from(new Map(words.map(w => [w.id, w])).values());
-      const shuffled = shuffleArray(uniqueWords);
-      prepareStudySession(shuffled);
+      let processedWords = Array.from(new Map(words.map(w => [w.id, w])).values());
+      
+      // SORTING LOGIC
+      if (smartDeckSort === 'random') {
+          processedWords = shuffleArray(processedWords);
+      } else {
+          processedWords.sort((a, b) => {
+               // Comparison Value Helper
+               const getValue = (w: WordData) => {
+                   // Priority 1: Creation Date for Custom Words (allows "Recently Added")
+                   // ID format: custom-TIMESTAMP-random
+                   if (type === 'custom') {
+                       const parts = w.id.split('-');
+                       return parts.length > 1 ? (parseInt(parts[1]) || 0) : 0;
+                   }
+                   // Priority 2: Last Review Date for Learning/Mastered (allows "Recently Studied")
+                   return w.lastReview || 0;
+               };
+
+               const valA = getValue(a);
+               const valB = getValue(b);
+
+               if (smartDeckSort === 'newest') return valB - valA; // Descending (Newest first)
+               return valA - valB; // Ascending (Oldest first)
+          });
+      }
+
+      prepareStudySession(processedWords);
   };
 
   const handleCardNext = async (isCorrect: boolean) => {
@@ -648,10 +677,26 @@ const App: React.FC = () => {
 
         {/* Smart Decks */}
         <div>
-           <h2 className="text-xl font-bold text-slate-800 dark:text-white mb-4 flex items-center gap-2">
-             <SparklesIcon className="w-6 h-6 text-purple-500" />
-             Smart Decks
-           </h2>
+           <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-2 mb-4">
+             <h2 className="text-xl font-bold text-slate-800 dark:text-white flex items-center gap-2">
+               <SparklesIcon className="w-6 h-6 text-purple-500" />
+               Smart Decks
+             </h2>
+             
+             <div className="flex items-center gap-2 bg-white dark:bg-slate-800 p-1 rounded-lg border border-slate-200 dark:border-slate-700">
+                 <span className="text-[10px] font-bold text-slate-400 uppercase px-2">Order:</span>
+                 <select 
+                     value={smartDeckSort}
+                     onChange={(e) => setSmartDeckSort(e.target.value as any)}
+                     className="bg-transparent text-sm font-bold text-slate-700 dark:text-slate-300 outline-none cursor-pointer pr-2"
+                 >
+                     <option value="random">🎲 Random</option>
+                     <option value="newest">🕒 Newest</option>
+                     <option value="oldest">🕰️ Oldest</option>
+                 </select>
+             </div>
+           </div>
+           
            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                {/* Revision Deck */}
                <div 
@@ -762,6 +807,25 @@ const App: React.FC = () => {
         }
     });
 
+    // Sorting Logic
+    const sortedWords = [...filteredWords].sort((a, b) => {
+        if (librarySort === 'a-z') return a.word.localeCompare(b.word);
+        if (librarySort === 'z-a') return b.word.localeCompare(a.word);
+        
+        // Extract timestamp from ID (format: prefix-timestamp-random)
+        const getTs = (id: string) => {
+            const parts = id.split('-');
+            return parts.length > 1 ? parseInt(parts[1]) || 0 : 0;
+        };
+        
+        const tA = getTs(a.id);
+        const tB = getTs(b.id);
+        
+        if (librarySort === 'newest') return tB - tA; // Newest first
+        if (librarySort === 'oldest') return tA - tB; // Oldest first
+        return 0;
+    });
+
     const filters: { id: typeof libraryFilter, label: string }[] = [
         { id: 'all', label: 'All Words' },
         { id: 'mastered', label: 'Mastered' },
@@ -778,15 +842,36 @@ const App: React.FC = () => {
                         <h1 className="text-3xl font-serif font-bold text-slate-900 dark:text-white">Word Library</h1>
                         <p className="text-slate-500 dark:text-slate-400">Manage your collection.</p>
                     </div>
-                    <div className="relative">
-                        <MagnifyingGlassIcon className="w-5 h-5 absolute left-3 top-3.5 text-slate-400" />
-                        <input 
-                            type="text" 
-                            placeholder="Search..." 
-                            value={librarySearch}
-                            onChange={(e) => setLibrarySearch(e.target.value)}
-                            className="pl-10 pr-4 py-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none w-full md:w-64 text-slate-900 dark:text-white"
-                        />
+                    
+                    <div className="flex flex-col sm:flex-row gap-2 w-full md:w-auto">
+                        {/* Search Bar */}
+                        <div className="relative flex-1">
+                            <MagnifyingGlassIcon className="w-5 h-5 absolute left-3 top-3.5 text-slate-400" />
+                            <input 
+                                type="text" 
+                                placeholder="Search..." 
+                                value={librarySearch}
+                                onChange={(e) => setLibrarySearch(e.target.value)}
+                                className="pl-10 pr-4 py-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none w-full text-slate-900 dark:text-white"
+                            />
+                        </div>
+
+                        {/* Sort Dropdown */}
+                        <div className="relative w-full sm:w-auto">
+                            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                <Bars3BottomLeftIcon className="h-5 w-5 text-slate-400" />
+                            </div>
+                            <select
+                                value={librarySort}
+                                onChange={(e) => setLibrarySort(e.target.value as any)}
+                                className="pl-10 pr-8 py-3 w-full sm:w-auto bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none appearance-none text-slate-900 dark:text-white font-medium cursor-pointer"
+                            >
+                                <option value="newest">Recently Added</option>
+                                <option value="oldest">Oldest First</option>
+                                <option value="a-z">A to Z</option>
+                                <option value="z-a">Z to A</option>
+                            </select>
+                        </div>
                     </div>
                 </div>
 
@@ -819,7 +904,7 @@ const App: React.FC = () => {
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
-                            {filteredWords.length === 0 ? (
+                            {sortedWords.length === 0 ? (
                                 <tr>
                                     <td colSpan={4} className="px-6 py-12 text-center text-slate-400">
                                         <div className="flex flex-col items-center gap-2">
@@ -829,7 +914,7 @@ const App: React.FC = () => {
                                     </td>
                                 </tr>
                             ) : (
-                                filteredWords.map((word) => (
+                                sortedWords.map((word) => (
                                     <tr key={word.id} className="hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors">
                                         <td className="px-6 py-4">
                                             <div className="flex items-center gap-2">
